@@ -10,7 +10,7 @@
     <orderEntry type="module-library" exported="">
       <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/../../Program Files/Java/jpbc-2.0.0/jars/jpbc-plaf-2.0.0.jar!/" />
+          <root url="jar://D:/Program Files/Java/jpbc-2.0.0/jars/jpbc-plaf-2.0.0.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
@@ -19,11 +19,12 @@
     <orderEntry type="module-library" exported="">
       <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/../../Program Files/Java/jpbc-2.0.0/jars/jpbc-api-2.0.0.jar!/" />
+          <root url="jar://D:/Program Files/Java/jpbc-2.0.0/jars/jpbc-api-2.0.0.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
       </library>
     </orderEntry>
+    <orderEntry type="library" name="jars" level="project" />
   </component>
 </module>

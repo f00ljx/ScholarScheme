@@ -2,20 +2,25 @@ import it.unisa.dia.gas.jpbc.Element;
 
 import it.unisa.dia.gas.jpbc.Pairing;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
+import org.omg.Messaging.SYNC_WITH_TRANSPORT;
 
+import javax.swing.*;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Properties;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class OFDDS_SSAS {
+    public static Element encsecret;
+    public static Element test_u;
+    public static Element test_r;
+    public static Element text_egg;
+    public static Element text_fdx;
+
     public static void setup(String pairingParametersFileName, String PPFileName, String mskFileName) {
         // 一、基于特定椭圆曲线类型生成Pairing实例
         // 1.从文件导入椭圆曲线参数
@@ -34,17 +39,18 @@ public class OFDDS_SSAS {
         Element kci = bp.getZr().newRandomElement().getImmutable();
 
         Element egg1 = bp.pairing(g, g).getImmutable();
+        text_egg = egg1.getImmutable();
         Element egg1_t = egg1.powZn(t).getImmutable();
         Element egg1_st = egg1.powZn(s.mul(t)).getImmutable();
         Element egg1_tkci = egg1_t.powZn(t.mul(kci)).getImmutable();
         Element egg1_strecipt = egg1.powZn(s.mul(t.negate())).getImmutable();
 
 
-        Element B1 = g.powZn(s);
-        Element B2 = g.powZn(beta);
-        Element B3 = g.powZn(t);
-        Element B4 = g.powZn(s.sub(kci));
-        Element B5 = g.powZn(t.negate());
+        Element B1 = g.powZn(s).getImmutable();
+        Element B2 = g.powZn(beta).getImmutable();
+        Element B3 = g.powZn(t).getImmutable();
+        Element B4 = g.powZn(s.sub(kci)).getImmutable();
+        Element B5 = g.powZn(t.negate()).getImmutable();
 
 
         Properties mskProp = new Properties();
@@ -91,6 +97,7 @@ public class OFDDS_SSAS {
 
         //设置签名秘密值y1
         Element y1 = bp.getZr().newRandomElement().getImmutable();
+//        System.out.println("y1 = " + y1);
 
         //先设置根节点要共享的秘密值
         sigAccessTree[0].secretShare = y1.getImmutable();
@@ -102,7 +109,7 @@ public class OFDDS_SSAS {
 
         skProp.setProperty("y1", Base64.getEncoder().withoutPadding().encodeToString(y1.toBytes()));
         for (int att : dataownerAttList) {
-            Element t = bp.getZr().newRandomElement();
+            Element t = bp.getZr().newRandomElement().getImmutable();
             for (Node node : sigAccessTree) {
                 if (node.att == att) {
                     Element pksatt = g.powZn(node.secretShare.div(t)).getImmutable();
@@ -117,7 +124,8 @@ public class OFDDS_SSAS {
         }
         //设置加密秘密值y2
         Element y2 = bp.getZr().newRandomElement().getImmutable();
-//        System.out.println("y2:");
+        encsecret = y2.getImmutable();
+        System.out.println("y2: " + y2);
 //        System.out.println(y2);
         skProp.setProperty("y2", Base64.getEncoder().withoutPadding().encodeToString(y2.toBytes()));
         //先设置根节点要共享的秘密值
@@ -151,6 +159,7 @@ public class OFDDS_SSAS {
         Properties skProp = new Properties();
 
         Element r = bp.getZr().newRandomElement().getImmutable();
+        test_r = r.getImmutable();
         Element D = g.powZn((t.mul(s.sub(kci)).add(r)).div(beta)).getImmutable();
         skProp.setProperty("D", Base64.getEncoder().withoutPadding().encodeToString(D.toBytes()));
 
@@ -211,7 +220,7 @@ public class OFDDS_SSAS {
         Properties ctProp = new Properties();
         ctProp.setProperty("C", Base64.getEncoder().withoutPadding().encodeToString(C.getBytes()));
 //        Element E = egg1_st.powZn(y2).mul(ck);
-        Element E = egg1_st.powZn(y2).mul(ck.toBigInteger());
+        Element E = egg1_st.powZn(y2).mul(ck.toBigInteger()).getImmutable();
         //存储密文组件
 
         ctProp.setProperty("E", Base64.getEncoder().withoutPadding().encodeToString(E.toBytes()));
@@ -313,15 +322,16 @@ public class OFDDS_SSAS {
         Element D = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(DString)).getImmutable();
 
         Element u = bp.getZr().newRandomElement().getImmutable();
+        test_u = u.getImmutable();
         //存储陷门信息
         Properties tdProp = new Properties();
         tdProp.setProperty("u", Base64.getEncoder().withoutPadding().encodeToString(u.toBytes()));
-        Element T1 = bp.getG1().newOneElement();
+        Element T1 = bp.getG1().newOneElement().getImmutable();
         for (String kw : Wuser) {
             Element H = ZrhashH2(kw, bp).getImmutable();
 //            System.out.println("*****************************************************************************************");
 //            System.out.println(H);
-            T1.mul(B1.powZn(u.mul(H)));
+            T1 = T1.mul(B1.powZn(u.mul(H)));
         }
         tdProp.setProperty("T1", Base64.getEncoder().withoutPadding().encodeToString(T1.toBytes()));
         Element T2 = B3.powZn(u).getImmutable();
@@ -371,8 +381,8 @@ public class OFDDS_SSAS {
                     String T5String = tdProp.getProperty("T5-" + node.att);
                     Element T5att = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(T5String)).getImmutable();
 
-                    Element eT4Cy = bp.pairing(T4att, Cy);
-                    Element eT5CCy = bp.pairing(T5att, CCy);
+                    Element eT4Cy = bp.pairing(T4att, Cy).getImmutable();
+                    Element eT5CCy = bp.pairing(T5att, CCy).getImmutable();
                     Element Fdx = eT4Cy.div(eT5CCy).getImmutable();
                     node.secretShare = Fdx.getImmutable();
                 }
@@ -437,18 +447,30 @@ public class OFDDS_SSAS {
 
             //判断等式
             //等式左边
-            Element IE = bp.getG1().newOneElement();
+            Element IE = bp.getG1().newOneElement().getImmutable();
             for (int j = 0; j < Wuser.length; j++) {
                 String IString = ctProp.getProperty("I-" + j);
                 Element Ij = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(IString)).getImmutable();
-                IE.mul(E0.mul(Ij));
+                IE = IE.mul(E0.mul(Ij));
             }
-            Element egg_left = bp.pairing(IE, T2);
+            System.out.println("IE = " + IE);
+            System.out.println("T2 = " + T2);
+            Element egg_left = bp.pairing(IE, T2).getImmutable();
             //等式右边
-//            System.out.println("y2: ");
+//            text_fdx = text_egg.powZn(test_r.mul(test_u).mul(encsecret));
+//            System.out.println("原始秘密值: ");
+//            System.out.println(text_fdx);
+//            System.out.println("恢复秘密值: ");
 //            System.out.println(encAccessTree[0].secretShare);
-            Element right = bp.pairing(E2, T1).mul(bp.pairing(E1, T3)).div(encAccessTree[0].secretShare);
-            if (egg_left.isEqual(right)) {
+            Element rlef = bp.pairing(E2, T1).getImmutable();
+            Element rrigh1 = bp.pairing(E1, T3).getImmutable();
+            Element rright = rrigh1.div(encAccessTree[0].secretShare);
+//            System.out.println(encAccessTree[0].secretShare);
+//            System.out.println(encAccessTree[0].secretShare.duplicate().invert());
+//            System.out.println(encAccessTree[0].secretShare.duplicate().mul(encAccessTree[0].secretShare.duplicate().invert()));
+            Element egg_right = rlef.mul(rright);
+//            Element right = bp.pairing(E2, T1).mul(bp.pairing(E1, T3)).div(encAccessTree[0].secretShare);
+            if (egg_left.isEqual(egg_right)) {
                 Properties partialctProp = new Properties();
                 Element Z1 = bp.pairing(E1, T3).div(encAccessTree[0].secretShare).getImmutable();
                 partialctProp.setProperty("Z1", Base64.getEncoder().withoutPadding().encodeToString(Z1.toBytes()));
@@ -476,7 +498,6 @@ public class OFDDS_SSAS {
 
         String uString = tdProp.getProperty("u");
         Element u = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(uString)).getImmutable();
-
 
         String EString = ctProp.getProperty("E");
         Element E = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(EString)).getImmutable();
@@ -559,7 +580,6 @@ public class OFDDS_SSAS {
         return zrElement;
 
     }
-
 
     public static byte[] sha1(String content) throws NoSuchAlgorithmException {
         MessageDigest instance = MessageDigest.getInstance("SHA-1");
@@ -650,7 +670,7 @@ public class OFDDS_SSAS {
         System.out.println("trapdoor successful");
         search(pairingParametersFileName, encAccessTree, sigAccessTree, userAttList, dataownerAttList, Wuser, pksFileName, tdFileName, ctFileName, partialctFileName, sigFileName);
         System.out.println("search successful");
-        boolean verifysig = verify(pairingParametersFileName, partialctFileName, sigFileName, ctFileName, tdFileName,sigAccessTree);
+        boolean verifysig = verify(pairingParametersFileName, partialctFileName, sigFileName, ctFileName, tdFileName, sigAccessTree);
         if (verifysig) {
             System.out.println("签名校验通过");
         } else {
@@ -663,6 +683,7 @@ public class OFDDS_SSAS {
             System.out.println("成功解密！");
         }
     }
+
     public static void main(String[] args) throws Exception {
         basicTest();
     }
