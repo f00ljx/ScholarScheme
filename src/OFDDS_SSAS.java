@@ -1,13 +1,8 @@
-import com.sun.java.accessibility.util.TopLevelWindowListener;
 import it.unisa.dia.gas.jpbc.Element;
-import it.unisa.dia.gas.jpbc.Field;
+
 import it.unisa.dia.gas.jpbc.Pairing;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
 
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-import javax.lang.model.util.ElementScanner6;
-import javax.management.modelmbean.ModelMBean;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
