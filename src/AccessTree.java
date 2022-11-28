@@ -113,10 +113,10 @@ public class AccessTree {
             if (validChildrenList.size() == n.gate[0]){
                 validChildren = validChildrenList.stream().mapToInt(i->i).toArray();
                 // 利用拉格朗日差值恢复秘密
-                Element secret = bp.getZr().newZeroElement().getImmutable();
+                Element secret = bp.getGT().newZeroElement().getImmutable();
                 for (int i : validChildren) {
                     Element delta = lagrange(i, validChildren, 0, bp);  //计算拉个朗日插值因子
-                    secret = secret.mul(nodes[i].secretShare.duplicate().powZn(delta).toBigInteger()); //以双线性对整体作为秘密值，因此用powzn做指数运算，用mul做连乘恢复秘密值
+                    secret = secret.mul(nodes[i].secretShare.duplicate().powZn(delta)); //以双线性对整体作为秘密值，因此用powzn做指数运算，用mul做连乘恢复秘密值
                 }
                 n.secretShare = secret;
             }

@@ -117,6 +117,8 @@ public class OFDDS_SSAS {
         }
         //设置加密秘密值y2
         Element y2 = bp.getZr().newRandomElement().getImmutable();
+//        System.out.println("y2:");
+//        System.out.println(y2);
         skProp.setProperty("y2", Base64.getEncoder().withoutPadding().encodeToString(y2.toBytes()));
         //先设置根节点要共享的秘密值
         encAccessTree[0].secretShare = y2.getImmutable();
@@ -241,12 +243,16 @@ public class OFDDS_SSAS {
         Element[] I = new Element[W.length];
 
         for (int j = 0; j < I.length; j++) {
-            if (j % 2 == 0) {
-                Element H = ZrhashH2(W[j], bp).getImmutable();
-                I[j] = B1.powZn(alpha1.mul(H)).getImmutable();
-            } else {
-                I[j] = bp.getZr().newOneElement().getImmutable();
-            }
+            Element H = ZrhashH2(W[j], bp).getImmutable();
+            System.out.println("Ij:");
+            System.out.println(H);
+            I[j] = B1.powZn(alpha1.mul(H)).getImmutable();
+//            if (j % 2 == 0) {
+//                Element H = ZrhashH2(W[j], bp).getImmutable();
+//                I[j] = B1.powZn(alpha1.mul(H)).getImmutable();
+//            } else {
+//                I[j] = bp.getZr().newOneElement().getImmutable();
+//            }
             ctProp.setProperty("I-" + j, Base64.getEncoder().withoutPadding().encodeToString(I[j].toBytes()));
         }
 
@@ -313,6 +319,8 @@ public class OFDDS_SSAS {
         Element T1 = bp.getG1().newOneElement();
         for (String kw : Wuser) {
             Element H = ZrhashH2(kw, bp).getImmutable();
+//            System.out.println("*****************************************************************************************");
+//            System.out.println(H);
             T1.mul(B1.powZn(u.mul(H)));
         }
         tdProp.setProperty("T1", Base64.getEncoder().withoutPadding().encodeToString(T1.toBytes()));
@@ -437,7 +445,8 @@ public class OFDDS_SSAS {
             }
             Element egg_left = bp.pairing(IE, T2);
             //等式右边
-            System.out.println(encAccessTree[0].secretShare.getClass().toString());
+//            System.out.println("y2: ");
+//            System.out.println(encAccessTree[0].secretShare);
             Element right = bp.pairing(E2, T1).mul(bp.pairing(E1, T3)).div(encAccessTree[0].secretShare);
             if (egg_left.isEqual(right)) {
                 Properties partialctProp = new Properties();
@@ -626,26 +635,34 @@ public class OFDDS_SSAS {
         String message = "nice try!";
         System.out.println("明文消息:" + message);
 
+
         setup(pairingParametersFileName, PPFileName, mskFileName);
+        System.out.println("setup successful");
         sExtract(pairingParametersFileName, PPFileName, dataownerAttList, encAccessTree, sigAccessTree, sksFileName, pksFileName);
+        System.out.println("sExtract successful");
         dExtract(pairingParametersFileName, PPFileName, userAttList, mskFileName, skdFileName);
+        System.out.println("dExtract successful");
         encrypt(pairingParametersFileName, PPFileName, message, encAccessTree, pksFileName, sksFileName, ctFileName, W);
+        System.out.println("encrypt successful");
         sign(pairingParametersFileName, message, dataownerAttList, sigAccessTree, sksFileName, pksFileName, sigFileName);
+        System.out.println("sign successful");
         trapdoor(pairingParametersFileName, PPFileName, skdFileName, userAttList, Wuser, tdFileName);
+        System.out.println("trapdoor successful");
         search(pairingParametersFileName, encAccessTree, sigAccessTree, userAttList, dataownerAttList, Wuser, pksFileName, tdFileName, ctFileName, partialctFileName, sigFileName);
-        String recovermessage = decrypt(pairingParametersFileName, partialctFileName, tdFileName, sigFileName, ctFileName);
-        System.out.println("解密结果:" + recovermessage);
+        System.out.println("search successful");
         boolean verifysig = verify(pairingParametersFileName, partialctFileName, sigFileName, ctFileName, tdFileName,sigAccessTree);
         if (verifysig) {
             System.out.println("签名校验通过");
         } else {
             System.out.println("签名校验不通过");
         }
+        String recovermessage = decrypt(pairingParametersFileName, partialctFileName, tdFileName, sigFileName, ctFileName);
+        System.out.println("解密结果:" + recovermessage);
+
         if (message.equals(recovermessage)) {
             System.out.println("成功解密！");
         }
     }
-
     public static void main(String[] args) throws Exception {
         basicTest();
     }
