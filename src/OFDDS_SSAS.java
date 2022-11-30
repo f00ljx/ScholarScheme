@@ -16,7 +16,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class OFDDS_SSAS {
-    public static Element encsecret;
+    //    public static Element encsecret;
+//    public static Element tt;
+//    public static Element tu;
+//    public static Element ts;
+//    public static Element tkci;
+//    public static Element ty2;
+//    public static Element talpha1;
+//    public static Element tH2sum;
+//    public static Element tegg;
+//    public static Element tg;
+    public static Element Sd;
 
     public static void setup(String pairingParametersFileName, String PPFileName, String mskFileName) {
         // 一、基于特定椭圆曲线类型生成Pairing实例
@@ -70,7 +80,11 @@ public class OFDDS_SSAS {
         storePropToFile(mskProp, mskFileName);
         storePropToFile(ppProp, PPFileName);
 
-
+//        tt = t;
+//        ts = s;
+//        tkci = kci;
+//        tegg = egg1;
+//        tg = g;
     }
 
     public static void sExtract(String pairingParametersFileName, String PP, int[] dataownerAttList, Node[] encAccessTree,
@@ -120,8 +134,8 @@ public class OFDDS_SSAS {
         }
         //设置加密秘密值y2
         Element y2 = bp.getZr().newRandomElement().getImmutable();
-        encsecret = y2.getImmutable();
-        System.out.println("y2: " + y2);
+//        encsecret = y2.getImmutable();
+//        System.out.println("y2: " + y2);
 //        System.out.println(y2);
         skProp.setProperty("y2", Base64.getEncoder().withoutPadding().encodeToString(y2.toBytes()));
         //先设置根节点要共享的秘密值
@@ -211,6 +225,8 @@ public class OFDDS_SSAS {
         String hashedPwd = new BigInteger(1, mdck.digest()).toString(16);// 16是表示转换为16进制数
         Sysenc_AES.DEFAULT_SECRET_KEY = hashedPwd;
         String C = Sysenc_AES.encode(Sysenc_AES.DEFAULT_SECRET_KEY, message);
+        System.out.println("密文: ");
+        System.out.println(C);
 
         Properties ctProp = new Properties();
         ctProp.setProperty("C", Base64.getEncoder().withoutPadding().encodeToString(C.getBytes()));
@@ -235,7 +251,7 @@ public class OFDDS_SSAS {
         }
 
         Element E0 = B4.powZn(y2).getImmutable();
-        System.out.println("E0 type: "+E0.getClass().toString());
+//        System.out.println("E0 type: " + E0.getClass().toString());
         Element E1 = B2.powZn(y2).getImmutable();
         Element E2 = B3.powZn(alpha1).getImmutable();
         Element E3 = egg1_tkci.powZn(y2).getImmutable();
@@ -246,11 +262,11 @@ public class OFDDS_SSAS {
 
         //建立关键词索引
         Element[] I = new Element[W.length];
-        Element testI = bp.getG1().newOneElement().getImmutable();
+//        Element testI = bp.getG1().newOneElement().getImmutable();
         for (int j = 0; j < I.length; j++) {
             Element H = ZrhashH2(W[j], bp).getImmutable();
-            System.out.println("Ij:");
-            System.out.println(H);
+//            System.out.println("Ij:");
+//            System.out.println(H);
             I[j] = B1.powZn(alpha1.mul(H)).getImmutable();
 //            if (j % 2 == 0) {
 //                Element H = ZrhashH2(W[j], bp).getImmutable();
@@ -258,21 +274,23 @@ public class OFDDS_SSAS {
 //            } else {
 //                I[j] = bp.getZr().newOneElement().getImmutable();
 //            }
-            testI = testI.mul(E0.mul(I[j]));
-            System.out.println("E0 mul : "+E0.mul(I[j]));
+//            testI = testI.mul(E0.mul(I[j]));
+//            System.out.println("E0 mul : "+E0.mul(I[j]));
             ctProp.setProperty("I-" + j, Base64.getEncoder().withoutPadding().encodeToString(I[j].toBytes()));
         }
-        System.out.println("IE0 = " + testI);
-
+//        System.out.println("IE0 = " + testI);
+//        talpha1 = alpha1;
+//        ty2 = y2;
         storePropToFile(ctProp, ctFileName);
     }
 
-    public static void sign(String pairingParametersFileName, String message, int[] dataownerAttList, Node[] sigAccessTree,
-                            String sksFileName, String pksFileName, String sigFileName) throws NoSuchAlgorithmException {
+    public static void sign(String pairingParametersFileName, int[] dataownerAttList, Node[] sigAccessTree,
+                            String sksFileName, String pksFileName, String sigFileName, String ctFileName) throws NoSuchAlgorithmException {
         Pairing bp = PairingFactory.getPairing(pairingParametersFileName);
 
         Properties sksProp = loadPropFromFile(sksFileName);
         Properties pksProp = loadPropFromFile(pksFileName);
+        Properties ctProp = loadPropFromFile(ctFileName);
 
         Element alpha2 = bp.getZr().newRandomElement().getImmutable();
 
@@ -281,7 +299,8 @@ public class OFDDS_SSAS {
         String Ytring = pksProp.getProperty("Y");
         Element Y = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(Ytring)).getImmutable();
         Element Ksd = bp.pairing(SKs, Y.powZn(alpha2)).getImmutable();
-        String KM = Ksd.toString() + message;
+        String C = ctProp.getProperty("C");
+        String KM = Ksd.toString() + C;
 
         Properties sigProp = new Properties();
         for (Node node : sigAccessTree) {
@@ -327,13 +346,16 @@ public class OFDDS_SSAS {
         tdProp.setProperty("u", Base64.getEncoder().withoutPadding().encodeToString(u.toBytes()));
         Element T1 = bp.getG1().newOneElement().getImmutable();
 //        Element testEadd = bp.getZr().newOneElement().getImmutable();
+//        Element Hh = bp.getZr().newZeroElement().getImmutable();
         for (String kw : Wuser) {
             Element H = ZrhashH2(kw, bp).getImmutable();
 //            System.out.println("*****************************************************************************************");
 //            System.out.println(H);
             T1 = T1.mul(B1.powZn(u.mul(H)));
+//            Hh = Hh.add(H);
 //            testEadd = testEadd.add(u.mul(H));
         }
+//        Element Tt = B1.powZn(u.mul(Hh));
         tdProp.setProperty("T1", Base64.getEncoder().withoutPadding().encodeToString(T1.toBytes()));
         Element T2 = B3.powZn(u).getImmutable();
         Element T3 = D.powZn(u).getImmutable();
@@ -356,7 +378,8 @@ public class OFDDS_SSAS {
             tdProp.setProperty("dealtax-" + att, Base64.getEncoder().withoutPadding().encodeToString(dealtax.toBytes()));
 
         }
-
+//        tu = u;
+//        tH2sum = Hh;
         storePropToFile(tdProp, tdFileName);
     }
 
@@ -434,6 +457,7 @@ public class OFDDS_SSAS {
             String E0String = ctProp.getProperty("E0");
             Element E0 = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(E0String)).getImmutable();
 
+
             String E1String = ctProp.getProperty("E1");
             Element E1 = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(E1String)).getImmutable();
             String E2String = ctProp.getProperty("E2");
@@ -445,6 +469,7 @@ public class OFDDS_SSAS {
             Element T1 = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(T1String)).getImmutable();
             String T2String = tdProp.getProperty("T2");
             Element T2 = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(T2String)).getImmutable();
+
             String T3String = tdProp.getProperty("T3");
             Element T3 = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(T3String)).getImmutable();
 
@@ -455,27 +480,33 @@ public class OFDDS_SSAS {
             for (int j = 0; j < Wuser.length; j++) {
                 String IString = ctProp.getProperty("I-" + j);
                 Element Ij = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(IString)).getImmutable();
-                System.out.println("E0 mul : "+E0.mul(Ij));
-                IE = IE.mul(E0.mul(Ij));
+
+//                System.out.println("E0 mul : "+E0.mul(Ij));
+                IE = IE.mul(Ij);
             }
-            System.out.println("IE = " + IE);
-            System.out.println("T2 = " + T2);
+            IE = IE.mul(E0);
+//            Element tIE = tg.powZn(ts.mul(talpha1.mul(tH2sum)));
+//            System.out.println("IE = " + IE);
+//            System.out.println("T2 = " + T2);
             Element egg_left = bp.pairing(IE, T2).getImmutable();
+//            Element tegg_left = tegg.powZn(tt.mul(tu).mul(ty2.mul(ts.sub(tkci)).add(ts.mul(talpha1.mul(tH2sum)))));
             //等式右边
 //            text_fdx = text_egg.powZn(test_r.mul(test_u).mul(encsecret));
 //            System.out.println("原始秘密值: ");
 //            System.out.println(text_fdx);
 //            System.out.println("恢复秘密值: ");
 //            System.out.println(encAccessTree[0].secretShare);
-            Element rlef = bp.pairing(E2, T1).getImmutable();
-            Element rrigh1 = bp.pairing(E1, T3).getImmutable();
-            Element rright = rrigh1.div(encAccessTree[0].secretShare);
+//            Element rlef = bp.pairing(E2, T1).getImmutable();
+//            Element trlef = tegg.powZn(ts.mul(tu.mul(tt.mul(talpha1.mul(tH2sum)))));
+//            Element rrigh1 = bp.pairing(E1, T3).getImmutable();
+//            Element rright = rrigh1.div(encAccessTree[0].secretShare);
+//            Element trright = tegg.powZn(tt.mul(tu.mul(ty2.mul(ts.sub(tkci)))));
 //            System.out.println(encAccessTree[0].secretShare);
 //            System.out.println(encAccessTree[0].secretShare.duplicate().invert());
 //            System.out.println(encAccessTree[0].secretShare.duplicate().mul(encAccessTree[0].secretShare.duplicate().invert()));
-            Element egg_right = rlef.mul(rright);
-//            Element right = bp.pairing(E2, T1).mul(bp.pairing(E1, T3)).div(encAccessTree[0].secretShare);
-            if (egg_left.isEqual(egg_right) || 1 == 1) {
+//            Element egg_right = rlef.mul(rright);
+            Element egg_right = bp.pairing(E2, T1).mul(bp.pairing(E1, T3)).div(encAccessTree[0].secretShare);
+            if (egg_left.isEqual(egg_right)) {
                 Properties partialctProp = new Properties();
                 Element Z1 = bp.pairing(E1, T3).div(encAccessTree[0].secretShare).getImmutable();
                 partialctProp.setProperty("Z1", Base64.getEncoder().withoutPadding().encodeToString(Z1.toBytes()));
@@ -506,14 +537,11 @@ public class OFDDS_SSAS {
 
         String EString = ctProp.getProperty("E");
         Element E = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(EString)).getImmutable();
-        String E3String = ctProp.getProperty("E3");
-        Element E3 = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(E3String)).getImmutable();
+//        String E3String = ctProp.getProperty("E3");
+//        Element E3 = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(E3String)).getImmutable();
         String CString = ctProp.getProperty("C");
         byte[] base64C = Base64.getDecoder().decode(CString);
         String C = new String(base64C);
-
-        String SdString = partialctProp.getProperty("Sd");
-        Element Sd = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(SdString)).getImmutable();
 
         Element ck = E.div(Sd);
 
@@ -546,15 +574,14 @@ public class OFDDS_SSAS {
 
         String E3String = ctverifyProp.getProperty("E3");
         Element E3 = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(E3String)).getImmutable();
-        String CString = ctverifyProp.getProperty("C");
-        String C = Base64.getDecoder().decode(CString).toString();
+        String C = ctverifyProp.getProperty("C");
 
         Element ZZ1 = Z1.powZn(u.invert());
-        Element Sd = ZZ1.mul(E3);
+        Sd = ZZ1.mul(E3);
 
 
         String thetaString = sigverifyProp.getProperty("theta");
-        Element theta = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(thetaString)).getImmutable();
+        Element theta = bp.getZr().newElementFromBytes(Base64.getDecoder().decode(thetaString)).getImmutable();
 
         Element Kds = bp.pairing(Z2, Sd);
         String KM = Kds.toString() + C;
@@ -566,10 +593,8 @@ public class OFDDS_SSAS {
             }
 
         }
-        Element verifytheta = GhashH1(KM, bp);
-        if (verifytheta.isEqual(theta) || 1 == 1) {
-            partialctProp.setProperty("Sd", Base64.getEncoder().withoutPadding().encodeToString(Sd.toBytes()));
-            storePropToFile(partialctProp, partialctFileName);
+        Element verifytheta = ZrhashH2(KM, bp);
+        if (verifytheta.isEqual(theta)) {
             return true;
         } else {
             return false;
@@ -673,7 +698,7 @@ public class OFDDS_SSAS {
         System.out.println("dExtract successful");
         encrypt(pairingParametersFileName, PPFileName, message, encAccessTree, pksFileName, sksFileName, ctFileName, W);
         System.out.println("encrypt successful");
-        sign(pairingParametersFileName, message, dataownerAttList, sigAccessTree, sksFileName, pksFileName, sigFileName);
+        sign(pairingParametersFileName, dataownerAttList, sigAccessTree, sksFileName, pksFileName, sigFileName, ctFileName);
         System.out.println("sign successful");
         trapdoor(pairingParametersFileName, PPFileName, skdFileName, userAttList, Wuser, tdFileName);
         System.out.println("trapdoor successful");
