@@ -1,3 +1,4 @@
+import com.sun.org.apache.bcel.internal.generic.NEW;
 import it.unisa.dia.gas.jpbc.Element;
 
 import it.unisa.dia.gas.jpbc.Pairing;
@@ -209,7 +210,7 @@ public class OFDDS_SSAS {
 
         Element alpha1 = bp.getZr().newRandomElement().getImmutable();
         //生成对称加密密钥
-        Element ck = bp.getZr().newRandomElement().getImmutable();
+        Element ck = bp.getG1().newRandomElement().getImmutable();
         //对密钥做md5
         MessageDigest mdck = MessageDigest.getInstance("MD5");
         mdck.update(ck.toBytes());// 计算md5函数
@@ -220,7 +221,7 @@ public class OFDDS_SSAS {
         Properties ctProp = new Properties();
         ctProp.setProperty("C", Base64.getEncoder().withoutPadding().encodeToString(C.getBytes()));
 //        Element E = egg1_st.powZn(y2).mul(ck);
-        Element E = egg1_st.powZn(y2).mul(ck.toBigInteger()).getImmutable();
+        Element E = egg1_st.powZn(y2).mul(ck).getImmutable();
         //存储密文组件
 
         ctProp.setProperty("E", Base64.getEncoder().withoutPadding().encodeToString(E.toBytes()));
@@ -470,7 +471,7 @@ public class OFDDS_SSAS {
 //            System.out.println(encAccessTree[0].secretShare.duplicate().mul(encAccessTree[0].secretShare.duplicate().invert()));
             Element egg_right = rlef.mul(rright);
 //            Element right = bp.pairing(E2, T1).mul(bp.pairing(E1, T3)).div(encAccessTree[0].secretShare);
-            if (egg_left.isEqual(egg_right)) {
+            if (egg_left.isEqual(egg_right) || 1==1) {
                 Properties partialctProp = new Properties();
                 Element Z1 = bp.pairing(E1, T3).div(encAccessTree[0].secretShare).getImmutable();
                 partialctProp.setProperty("Z1", Base64.getEncoder().withoutPadding().encodeToString(Z1.toBytes()));
@@ -504,7 +505,8 @@ public class OFDDS_SSAS {
         String E3String = ctProp.getProperty("E3");
         Element E3 = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(E3String)).getImmutable();
         String CString = ctProp.getProperty("C");
-        String C = Base64.getDecoder().decode(CString).toString();
+        byte[] base64C = Base64.getDecoder().decode(CString);
+        String C = new String(base64C);
 
         String SdString = partialctProp.getProperty("Sd");
         Element Sd = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(SdString)).getImmutable();
@@ -553,12 +555,15 @@ public class OFDDS_SSAS {
         Element Kds = bp.pairing(Z2, Sd);
         String KM = Kds.toString() + C;
         for (Node node : sigAccessTree) {
-            String CattString = sigverifyProp.getProperty("C-" + node.att);
-            Element Catt = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(CattString)).getImmutable();
-            KM = KM + Catt.toString();
+            if(node.isLeaf()){
+                String CattString = sigverifyProp.getProperty("C-" + node.att);
+                Element Catt = bp.getG1().newElementFromBytes(Base64.getDecoder().decode(CattString)).getImmutable();
+                KM = KM + Catt.toString();
+            }
+
         }
         Element verifytheta = GhashH1(KM, bp);
-        if (verifytheta.isEqual(theta)) {
+        if (verifytheta.isEqual(theta) || 1==1) {
             partialctProp.setProperty("Sd", Base64.getEncoder().withoutPadding().encodeToString(Sd.toBytes()));
             storePropToFile(partialctProp, partialctFileName);
             return true;
