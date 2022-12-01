@@ -1,14 +1,8 @@
-import com.sun.org.apache.bcel.internal.generic.NEW;
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Pairing;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
-import org.omg.Messaging.SYNC_WITH_TRANSPORT;
-import sun.awt.windows.WPrinterJob;
 
-import javax.swing.*;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -190,6 +184,7 @@ public class OFDDS_SSAS {
     public static void encrypt(String pairingParametersFileName, String PP, String message, Node[] encAccessTree,
                                String pksFileName, String sksFileName, String ctFileName, String[] W) throws NoSuchAlgorithmException {
         Pairing bp = PairingFactory.getPairing(pairingParametersFileName);
+        long starttime = System.currentTimeMillis();
 
         Properties ppProp = loadPropFromFile(PP);
         String gString = ppProp.getProperty("g");
@@ -209,8 +204,8 @@ public class OFDDS_SSAS {
 
 
         Properties sksProp = loadPropFromFile(sksFileName);
-        String y1String = sksProp.getProperty("y1");
-        Element y1 = bp.getZr().newElementFromBytes(Base64.getDecoder().decode(y1String)).getImmutable();
+//        String y1String = sksProp.getProperty("y1");
+//        Element y1 = bp.getZr().newElementFromBytes(Base64.getDecoder().decode(y1String)).getImmutable();
         String y2String = sksProp.getProperty("y2");
         Element y2 = bp.getZr().newElementFromBytes(Base64.getDecoder().decode(y2String)).getImmutable();
 
@@ -281,6 +276,7 @@ public class OFDDS_SSAS {
 //        System.out.println("IE0 = " + testI);
 //        talpha1 = alpha1;
 //        ty2 = y2;
+        System.out.println("加密时间：" + (System.currentTimeMillis() - starttime));
         storePropToFile(ctProp, ctFileName);
     }
 
@@ -644,8 +640,9 @@ public class OFDDS_SSAS {
     }
 
     public static void basicTest() throws Exception {
-        int[] userAttList = {1, 2, 3, 4};
-        int[] dataownerAttList = {1, 2, 3};
+        int[] userAttList = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+        int[] dataownerAttList = {1, 2, 3, 4, 5, 6, 7, 8, 9};
 
 //        Node[] accessTree = new Node[7];
 //        accessTree[0] = new Node(new int[]{2,3}, new int[]{1,2,3});
@@ -655,24 +652,24 @@ public class OFDDS_SSAS {
 //        accessTree[4] = new Node(2);
 //        accessTree[5] = new Node(3);
 //        accessTree[6] = new Node(4);
-
-        Node[] sigAccessTree = new Node[4];
-        sigAccessTree[0] = new Node(new int[]{3, 3}, new int[]{1, 2, 3});
-        sigAccessTree[1] = new Node(1);
-        sigAccessTree[2] = new Node(2);
-        sigAccessTree[3] = new Node(3);
-
-        Node[] encAccessTree = new Node[5];
-        encAccessTree[0] = new Node(new int[]{4, 4}, new int[]{1, 2, 3, 4});
-        encAccessTree[1] = new Node(1);
-        encAccessTree[2] = new Node(2);
-        encAccessTree[3] = new Node(3);
-        encAccessTree[4] = new Node(4);
+        //手动定义访问树
+//        Node[] sigAccessTree = new Node[4];
+//        sigAccessTree[0] = new Node(new int[]{3, 2}, new int[]{1, 2, 3});
+//        sigAccessTree[1] = new Node(1);
+//        sigAccessTree[2] = new Node(2);
+//        sigAccessTree[3] = new Node(3);
+//
+//        Node[] encAccessTree = new Node[5];
+//        encAccessTree[0] = new Node(new int[]{4, 2}, new int[]{1, 2, 3, 4});
+//        encAccessTree[1] = new Node(1);
+//        encAccessTree[2] = new Node(2);
+//        encAccessTree[3] = new Node(3);
+//        encAccessTree[4] = new Node(4);
+        Node[] sigAccessTree = AutoGenTree.tree(dataownerAttList, 3);
+        Node[] encAccessTree = AutoGenTree.tree(dataownerAttList, 3);
 
         String[] W = {"a", "b", "c", "d", "e", "f", "g"};
-
         String[] Wuser = {"a", "b", "c", "d", "e", "f", "g"};
-
 
         String dir = "data/";
         String pairingParametersFileName = "F:/Program Files/Java/jpbc-2.0.0/params/curves/a.properties";
@@ -685,36 +682,39 @@ public class OFDDS_SSAS {
         String partialctFileName = dir + "partialct.properties";
         String sigFileName = dir + "sig.properties";
         String tdFileName = dir + "td.properties";
+        String fileName = dir + "message1.txt";
+        String message = "";
+        BufferedReader in = new BufferedReader(new FileReader(fileName));
 
-        String message = "nice try!";
-        System.out.println("明文消息:" + message);
+        while ((message = in.readLine()) != null) {
+            System.out.println("明文消息:" + message);
+//        String message = "nice try!";
+            setup(pairingParametersFileName, PPFileName, mskFileName);
+            System.out.println("setup successful");
+            sExtract(pairingParametersFileName, PPFileName, dataownerAttList, encAccessTree, sigAccessTree, sksFileName, pksFileName);
+            System.out.println("sExtract successful");
+            dExtract(pairingParametersFileName, PPFileName, userAttList, mskFileName, skdFileName);
+            System.out.println("dExtract successful");
+            encrypt(pairingParametersFileName, PPFileName, message, encAccessTree, pksFileName, sksFileName, ctFileName, W);
+            System.out.println("encrypt successful");
+            sign(pairingParametersFileName, dataownerAttList, sigAccessTree, sksFileName, pksFileName, sigFileName, ctFileName);
+            System.out.println("sign successful");
+            trapdoor(pairingParametersFileName, PPFileName, skdFileName, userAttList, Wuser, tdFileName);
+            System.out.println("trapdoor successful");
+            search(pairingParametersFileName, encAccessTree, sigAccessTree, userAttList, dataownerAttList, Wuser, pksFileName, tdFileName, ctFileName, partialctFileName, sigFileName);
+            System.out.println("search successful");
+            boolean verifysig = verify(pairingParametersFileName, partialctFileName, sigFileName, ctFileName, tdFileName, sigAccessTree);
+            if (verifysig) {
+                System.out.println("签名校验通过");
+            } else {
+                System.out.println("签名校验不通过");
+            }
+            String recovermessage = decrypt(pairingParametersFileName, partialctFileName, tdFileName, sigFileName, ctFileName);
+            System.out.println("解密结果:" + recovermessage);
 
-
-        setup(pairingParametersFileName, PPFileName, mskFileName);
-        System.out.println("setup successful");
-        sExtract(pairingParametersFileName, PPFileName, dataownerAttList, encAccessTree, sigAccessTree, sksFileName, pksFileName);
-        System.out.println("sExtract successful");
-        dExtract(pairingParametersFileName, PPFileName, userAttList, mskFileName, skdFileName);
-        System.out.println("dExtract successful");
-        encrypt(pairingParametersFileName, PPFileName, message, encAccessTree, pksFileName, sksFileName, ctFileName, W);
-        System.out.println("encrypt successful");
-        sign(pairingParametersFileName, dataownerAttList, sigAccessTree, sksFileName, pksFileName, sigFileName, ctFileName);
-        System.out.println("sign successful");
-        trapdoor(pairingParametersFileName, PPFileName, skdFileName, userAttList, Wuser, tdFileName);
-        System.out.println("trapdoor successful");
-        search(pairingParametersFileName, encAccessTree, sigAccessTree, userAttList, dataownerAttList, Wuser, pksFileName, tdFileName, ctFileName, partialctFileName, sigFileName);
-        System.out.println("search successful");
-        boolean verifysig = verify(pairingParametersFileName, partialctFileName, sigFileName, ctFileName, tdFileName, sigAccessTree);
-        if (verifysig) {
-            System.out.println("签名校验通过");
-        } else {
-            System.out.println("签名校验不通过");
-        }
-        String recovermessage = decrypt(pairingParametersFileName, partialctFileName, tdFileName, sigFileName, ctFileName);
-        System.out.println("解密结果:" + recovermessage);
-
-        if (message.equals(recovermessage)) {
-            System.out.println("成功解密！");
+            if (message.equals(recovermessage)) {
+                System.out.println("成功解密！");
+            }
         }
     }
 
